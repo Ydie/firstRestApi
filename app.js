@@ -5,16 +5,16 @@ const bodyParser = require('body-parser')
 const mongoose = require('mongoose')
 const multer = require('multer')
 const { v4: uuidv4 } = require('uuid')
-//? Routes
-const feedRoutes = require('./routes/feed.js')
 
 const app = express()
+app.use('/images', express.static(path.join(__dirname, 'images')))
+//? Multer
 const fileStorage = multer.diskStorage({
 	destination: (req, file, cb) => {
 		cb(null, 'images')
 	},
 	filename: (req, file, cb) => {
-		cb(null, uuidv4() + '-' + file.originalname)
+		cb(null, new Date().getTime() + '-' + file.originalname)
 	},
 })
 const fileFilter = (req, file, cb) => {
@@ -27,7 +27,8 @@ const fileFilter = (req, file, cb) => {
 // app.use(bodyParser.urlencoded()) // x-www-form-urlencoded <form>
 app.use(bodyParser.json()) // application/json
 app.use(multer({ storage: fileStorage, fileFilter: fileFilter }).single('image'))
-app.use('/images', express.static(path.join(__dirname, 'images')))
+//? Routes
+const feedRoutes = require('./routes/feed.js')
 //! CORS Issue fixed by serwer site code. Allow cross access beetwen site and serwer
 //! * means every site is allowed to access
 app.use((req, res, next) => {
