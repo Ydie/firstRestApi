@@ -1,4 +1,6 @@
 const { validationResult } = require('express-validator')
+const fs = require('fs')
+const path = require('path')
 const Post = require('../models/post.js')
 exports.getPosts = (req, res, next) => {
 	Post.find()
@@ -29,7 +31,7 @@ exports.createPost = (req, res, next) => {
 		error.statusCode = 422
 		throw error
 	}
-	const imageUrl = req.file.path
+	const imageUrl = req.file.path.replace(/\\/g, '/') // Poprawione: użyj req.file.path
 	const title = req.body.title
 	const content = req.body.content
 	const post = new Post({
@@ -72,4 +74,59 @@ exports.getPost = (req, res, next) => {
 			}
 			next(err)
 		})
+}
+exports.updatePost = (req, res, next) => {
+	const postId = req.params.postId
+	const errors = validationResult(req)
+	if (!errors.isEmpty()) {
+		const error = new Error('Validation failed,Entered data is incorrect')
+		error.statusCode = 422
+		throw error
+	}
+	const title = req.body.title
+	const content = req.body.content
+	let imageUrl = req.body.image
+	if (req.file) {
+		imageUrl = req.file.path.replace(/\\/g, '/')
+	}
+	if (!imageUrl && !req.file) {
+		const error = new Error('No image provided')
+		error.statusCode = 422
+		throw error
+	}
+	Post.findById(postId)
+		.then(post => {
+			if (!post) {
+				const error = new Error('Could not find a post!')
+				error.statusCode = 404
+				throw Error
+			}
+			if (imageUrl !== post.imageUrl) {
+				clearImage(post.imageUrl)
+			}
+			post.title = title
+			post.imageUrl = imageUrl
+			post.content = content
+			return post.save()
+		})
+		.then(result => {
+			res.status(200).json({ message: 'Post updated', post: result })
+		})
+		.catch(error => {
+			if (!error.statusCode) {
+				error.statusCode = 500
+				next(error)
+			}
+		})
+}
+
+const clearImage = filePath => {
+	const fullPath = path.join(__dirname, '..', filePath)
+	fs.unlink(fullPath, err => {
+		if (err) {
+			console.log('Failed to delete file:', fullPath, err)
+		} else {
+			console.log('File deleted:', fullPath)
+		}
+	})
 }
