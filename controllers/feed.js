@@ -1,6 +1,7 @@
 const { validationResult } = require('express-validator')
 const fs = require('fs')
 const path = require('path')
+const io = require('../socket.js')
 const Post = require('../models/post.js')
 const User = require('../models/user.js')
 exports.getPosts = (req, res, next) => {
@@ -60,6 +61,7 @@ exports.createPost = (req, res, next) => {
 		.then(user => {
 			creator = user
 			user.posts.push(post)
+			io.getIO().emit('posts', { action: 'create', post: post })
 			return user.save()
 		})
 		.then(result => {
